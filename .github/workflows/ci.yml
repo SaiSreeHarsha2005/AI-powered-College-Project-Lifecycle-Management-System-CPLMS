@@ -1,0 +1,83 @@
+name: CPLMS Enterprise CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  # -------------------------------------------------------------
+  # 1. Backend Service Validation & Test Suite
+  # -------------------------------------------------------------
+  backend-ci:
+    name: Backend (Spring Boot 3 + Java 17)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compile and Run Unit Tests
+        run: |
+          cd backend
+          mvn clean test -B
+
+  # -------------------------------------------------------------
+  # 2. AI Microservice Validation
+  # -------------------------------------------------------------
+  ai-service-ci:
+    name: AI Service (FastAPI + Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          cd ai-service
+          pip install -r requirements.txt
+
+      - name: Validate Python Syntax & Imports
+        run: |
+          cd ai-service
+          python -m py_compile app/main.py app/core/config.py app/services/llm_service.py
+
+  # -------------------------------------------------------------
+  # 3. Frontend Service Build & Typecheck
+  # -------------------------------------------------------------
+  frontend-ci:
+    name: Frontend (React 19 + TypeScript + Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: TypeScript Type Check & Production Bundle Build
+        run: |
+          cd frontend
+          npm run build
